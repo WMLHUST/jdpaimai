@@ -1,5 +1,5 @@
 
-var aboutme = "***京东夺宝岛抢拍-V 2.0-谁与争锋***\n"
+var aboutme = "***京东夺宝岛抢拍-V 2.2-谁与争锋***\n"
 
 console.log(aboutme);
 console.log("有任何问题 %c QQ 244320233 Email:zhang1hang2@163.com", "color:red");
@@ -15,24 +15,21 @@ $('body').prepend(code);
 
 // 取商品拍卖编号
 var num = queryNum();
-var int = 0;
-var remainTime = 0;
+//var int = 0;
+var remainTime = -1;
+var priceCurrent = -1;
 
 var host = "http://dbditem.jd.com"
 
 $('#qp_btn_begin').on('click', function(){
-    setTimeout(function repeatMe(){
-        queryStatus(num);
-        var offset = new Date().getTime() % 100;
-        if (offset<50) {
-            setTimeout(repeatMe,100+offset);
-        } else{
-            setTimeout(repeatMe, offset);
-        }
-        
-    },100);
+	queryStatus(num);
+	//setTimeout("queryStatus(num)", 2000);
+	//setTimeout("queryStatus(num)", 2000);
 });
 
+function printVAR(){
+	console.info("Out time, Remain Time: "+remainTime+", Current Price: "+priceCurrent);
+}
 
 function queryNum() {
     var addr = window.location.href;
@@ -42,25 +39,31 @@ function queryNum() {
 }
 
 function bid(paimaiId, price) {
-    console.info("抢拍中：" + price)
-    var max = $('#qp_max_price').val()
-    if (price*1.00 < max*1.00) {
-        var url = "/services/bid.action?t=" + getRamdomNumber();
-        var data = {paimaiId:paimaiId,price:price,proxyFlag:0,bidSource:0};
-        jQuery.getJSON(url,data,function(jqXHR){
-            if(jqXHR!=undefined){
-                if(jqXHR.result=='200'){
-                    console.info("恭喜您，出价成功:" + price);
-                }else if(jqXHR.result=='login'){
-                    window.location.href='http://passport.jd.com/new/login.aspx?ReturnUrl='+window.location.href;
-                }else{
-                    console.info("很抱歉，出价失败" + jqXHR.message);
-                }
-            }
-        });
-    } else {
-        console.info("当前价：" + price +", 已超出你的报价最大值" + max)
-    }
+    console.info("抢拍中：" + price)  
+	var url = "/services/bid.action?t=" + getRamdomNumber();
+	var data = {paimaiId:paimaiId,price:price,proxyFlag:0,bidSource:0};
+	jQuery.getJSON(url,data,function(jqXHR){
+		if(jqXHR!=undefined){
+			if(jqXHR.result=='200'){
+				console.info("恭喜您，出价成功:" + price);
+				setTimeout("queryStatus(num)",200);
+			}else if(jqXHR.result=='login'){
+				window.location.href='http://passport.jd.com/new/login.aspx?ReturnUrl='+window.location.href;
+			}else if(jqXHR.result=='517'){
+				//出价频率过快
+				console.info("出价失败: " + jqXHR.message);
+				setTimeout("queryStatus(num)",1000);
+			}else if(jqXHR.result=='525'){
+				//重复出价
+				console.info("出价失败: " + jqXHR.message);
+				setTimeout("queryStatus(num)",400);
+			}else{
+				//其他错误
+				console.info("出价失败: " + jqXHR.message);
+				setTimeout("queryStatus(num)",800);
+			}
+		}
+	});
 }
 
 function getRamdomNumber(){
@@ -74,15 +77,29 @@ function getRamdomNumber(){
 
 // 查询商品状态
 function queryStatus(num) {
+	console.info("function query status");
     var queryIF = host + "/json/current/queryList.action?paimaiIds="+num;
     $.get(queryIF, function(data) {
         var objs = $.parseJSON(data);
         var remainTime = objs[0].remainTime;
         var priceCurrent = objs[0].currentPrice;
-        console.info("####"+remainTime+"#####"+priceCurrent);
-        if (remainTime<201 && remainTime>0) {
-            var addPrice = $('#qp_add_price').val()*1.00
-            bid(num, priceCurrent * 1 + addPrice)
+        console.info("####Remain Time: "+remainTime+", #####Current Price: "+priceCurrent);
+
+		if(remainTime>0){
+			var max = $('#qp_max_price').val();
+			var addPrice = $('#qp_add_price').val()*1.00;
+            if(priceCurrent<max){
+				if(remainTime < 2000){
+					bid(num, priceCurrent * 1 + addPrice);
+					setTimeout("queryStatus(num)", 100);
+				}else if(remainTime < 10000){
+					setTimeout("queryStatus(num)", 1500);
+				}else{
+					setTimeout("queryStatus(num)", 5000);
+				}
+			}else{
+				console.info("当前价：" + priceCurrent +", 已超出你的报价最大值" + max);
+			}
         }
     });
 }

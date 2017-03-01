@@ -46,7 +46,7 @@ function bid(paimaiId, price) {
 		if(jqXHR!=undefined){
 			if(jqXHR.result=='200'){
 				console.info("恭喜您，出价成功:" + price);
-				setTimeout("queryStatus(num)",200);
+				setTimeout("queryStatus(num)",300);
 			}else if(jqXHR.result=='login'){
 				window.location.href='http://passport.jd.com/new/login.aspx?ReturnUrl='+window.location.href;
 			}else if(jqXHR.result=='517'){
@@ -91,7 +91,7 @@ function queryStatus(num) {
             if(priceCurrent<max){
 				if(remainTime < 2000){
 					bid(num, priceCurrent * 1 + addPrice);
-					setTimeout("queryStatus(num)", 100);
+					setTimeout("queryStatus(num)", 300);
 				}else if(remainTime < 10000){
 					setTimeout("queryStatus(num)", 1500);
 				}else{
